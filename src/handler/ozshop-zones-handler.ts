@@ -1,0 +1,20 @@
+import type { Request, Response } from 'express';
+import { getShopZones } from '../service/shop-service.js';
+import { AppConfig } from '../utils/app-config.js';
+import { InvalidLastChangeError, parseLastChange } from '../validator/last-change-validator.js';
+
+export function ozShopZonesHandler(req: Request, res: Response): void {
+  if (!AppConfig.exposeOzShop) {
+    res.status(404).json({ error: 'not_found' });
+    return;
+  }
+  try {
+    res.json(getShopZones(parseLastChange(req.query.lastChange)));
+  } catch (error) {
+    if (error instanceof InvalidLastChangeError) {
+      res.status(400).json({ error: 'invalid_last_change', message: error.message });
+      return;
+    }
+    res.status(503).json({ error: 'shop_unavailable' });
+  }
+}

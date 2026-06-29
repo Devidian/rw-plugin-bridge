@@ -1,0 +1,25 @@
+services:
+  rw-plugin-bridge:
+    build: .
+    container_name: rw-plugin-bridge
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3000
+      SERVER_ROOT: ${SERVER_ROOT:-/appdata/rising-world/dedicated-server}
+      ADMINUTILS_MAP_DB_PATH: ${ADMINUTILS_MAP_DB_PATH:-}
+      ADMINUTILS_MAP_WORLD_NAME: ${ADMINUTILS_MAP_WORLD_NAME:-}
+      EXPOSE_OZADMINUTILS_MAP: ${EXPOSE_OZADMINUTILS_MAP:-true}
+      EXPOSE_OZADMINUTILS_PLUGINS: ${EXPOSE_OZADMINUTILS_PLUGINS:-true}
+      EXPOSE_OZADMINUTILS_PLAYERLIST: ${EXPOSE_OZADMINUTILS_PLAYERLIST:-true}
+      EXPOSE_OZADMINUTILS_SERVER_CONFIG: ${EXPOSE_OZADMINUTILS_SERVER_CONFIG:-true}
+      EXPOSE_OZGPS_MARKERS: ${EXPOSE_OZGPS_MARKERS:-true}
+      EXPOSE_OZMARKETPLACE: ${EXPOSE_OZMARKETPLACE:-true}
+      EXPOSE_OZSHOP: ${EXPOSE_OZSHOP:-true}
+      EXPOSE_OZLANDCLAIM: ${EXPOSE_OZLANDCLAIM:-true}
+      SQLITE_BUSY_TIMEOUT_MS: ${SQLITE_BUSY_TIMEOUT_MS:-5000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - ${SERVER_ROOT:-/appdata/rising-world/dedicated-server}:${SERVER_ROOT:-/appdata/rising-world/dedicated-server}:ro
