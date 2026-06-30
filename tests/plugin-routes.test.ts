@@ -1,8 +1,9 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { createWriteStream, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import request from 'supertest';
+import { ZipFile } from 'yazl';
 import { createApp } from '../src/server.js';
 
 function createServerRoot(): { root: string; databasePath: string } {
@@ -280,14 +281,17 @@ describe('plugin routes', () => {
     process.env.SERVER_ROOT = root;
     const jarOnlyRoot = path.join(root, 'Plugins', 'OZJarOnly');
     mkdirSync(jarOnlyRoot, { recursive: true });
-    writeFileSync(path.join(jarOnlyRoot, 'OZJarOnly.jar'), 'jar');
+    await writeJar(
+      path.join(jarOnlyRoot, 'OZJarOnly.jar'),
+      'name: "OZ - Jar Only"\nversion: "2.1.0"\n',
+    );
 
     const response = await request(createApp()).get('/plugins/ozadminutils/plugins').expect(200);
 
     expect(response.body.plugins).toEqual([
       { directory: 'OZAdminUtils', name: 'OZ - Admin Utils', version: '1.0.0', valid: true },
       { directory: 'OZGPS', name: 'OZ - GPS', version: '1.0.0', valid: true },
-      { directory: 'OZJarOnly', name: 'OZJarOnly', valid: true },
+      { directory: 'OZJarOnly', name: 'OZ - Jar Only', version: '2.1.0', valid: true },
       { directory: 'OZLandClaim', name: 'OZ - Land Claim', version: '1.0.0', valid: true },
       { directory: 'OZMarketplace', name: 'OZ - Marketplace', version: '1.0.0', valid: true },
       { directory: 'OZShop', name: 'OZ - Shop', version: '1.0.0', valid: true },
@@ -537,3 +541,15 @@ describe('plugin routes', () => {
     await request(createApp()).get('/plugins/ozlandclaim/claim-sales').expect(404).expect({ error: 'not_found' });
   });
 });
+
+function writeJar(filePath: string, manifest: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const zip = new ZipFile();
+    zip.addBuffer(Buffer.from(manifest), 'resources/plugin.yml');
+    zip.outputStream
+      .pipe(createWriteStream(filePath))
+      .on('close', resolve)
+      .on('error', reject);
+    zip.end();
+  });
+}
