@@ -13,7 +13,13 @@ export async function listPlugins(rootPath: string = AppConfig.serverRoot): Prom
     directories.map(async (entry): Promise<PluginInfoDto> => {
       const pluginPath = path.join(pluginsPath, entry.name);
       const manifest = await readManifest(pluginPath);
-      if (!manifest) return { directory: entry.name, valid: false };
+      if (!manifest) {
+        return {
+          directory: entry.name,
+          name: entry.name,
+          valid: await hasJar(pluginPath),
+        };
+      }
       return {
         directory: entry.name,
         name: typeof manifest.name === 'string' ? manifest.name : undefined,
@@ -22,6 +28,15 @@ export async function listPlugins(rootPath: string = AppConfig.serverRoot): Prom
       };
     }),
   );
+}
+
+async function hasJar(pluginPath: string): Promise<boolean> {
+  try {
+    const entries = await readdir(pluginPath, { withFileTypes: true });
+    return entries.some((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.jar'));
+  } catch {
+    return false;
+  }
 }
 
 async function readManifest(pluginPath: string): Promise<Record<string, unknown> | null> {

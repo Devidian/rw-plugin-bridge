@@ -278,12 +278,16 @@ describe('plugin routes', () => {
   it('serves plugin inventory', async () => {
     const { root } = createServerRoot();
     process.env.SERVER_ROOT = root;
+    const jarOnlyRoot = path.join(root, 'Plugins', 'OZJarOnly');
+    mkdirSync(jarOnlyRoot, { recursive: true });
+    writeFileSync(path.join(jarOnlyRoot, 'OZJarOnly.jar'), 'jar');
 
     const response = await request(createApp()).get('/plugins/ozadminutils/plugins').expect(200);
 
     expect(response.body.plugins).toEqual([
       { directory: 'OZAdminUtils', name: 'OZ - Admin Utils', version: '1.0.0', valid: true },
       { directory: 'OZGPS', name: 'OZ - GPS', version: '1.0.0', valid: true },
+      { directory: 'OZJarOnly', name: 'OZJarOnly', valid: true },
       { directory: 'OZLandClaim', name: 'OZ - Land Claim', version: '1.0.0', valid: true },
       { directory: 'OZMarketplace', name: 'OZ - Marketplace', version: '1.0.0', valid: true },
       { directory: 'OZShop', name: 'OZ - Shop', version: '1.0.0', valid: true },
