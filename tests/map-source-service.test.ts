@@ -31,6 +31,13 @@ function createSourceDatabase(): string {
        VALUES (1, -2, 3, ?, ?, 1000, ?, NULL, 7)`,
     )
     .run(heights, textures, 'a'.repeat(64));
+  database
+    .prepare(
+      `INSERT INTO map_chunks_v1
+       (schema_version, chunk_x, chunk_z, heights, textures, updated_at_ms, content_hash, biome, region)
+       VALUES (1, -1, 3, ?, ?, 1001, ?, NULL, 8)`,
+    )
+    .run(heights, textures, 'b'.repeat(64));
   database.close();
   return databasePath;
 }
@@ -49,12 +56,37 @@ describe('MapSourceReader', () => {
         biome: null,
         region: 7,
       }),
+      expect.objectContaining({
+        schemaVersion: 1,
+        chunkX: -1,
+        chunkZ: 3,
+        updatedAtMs: 1001,
+        contentHash: 'b'.repeat(64),
+        biome: null,
+        region: 8,
+      }),
     ]);
   });
 
   it('filters by lastChange', () => {
     const reader = new MapSourceReader(createSourceDatabase());
 
-    expect(reader.listChunks(1000)).toEqual([]);
+    expect(reader.listChunks(1000)).toEqual([
+      expect.objectContaining({
+        chunkX: -1,
+        updatedAtMs: 1001,
+      }),
+    ]);
+  });
+
+  it('limits and offsets ordered chunks', () => {
+    const reader = new MapSourceReader(createSourceDatabase());
+
+    expect(reader.listChunks({ limit: 1, offset: 1 })).toEqual([
+      expect.objectContaining({
+        chunkX: -1,
+        updatedAtMs: 1001,
+      }),
+    ]);
   });
 });

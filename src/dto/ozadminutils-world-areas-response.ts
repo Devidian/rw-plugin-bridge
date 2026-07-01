@@ -3,6 +3,9 @@ export interface OzAdminUtilsWorldAreaDto {
   name: string;
   permission: string;
   priority: number;
+  ownerUid?: string;
+  ownerDbId?: number;
+  ownerName?: string;
   startX: number;
   startY: number;
   startZ: number;
@@ -16,5 +19,6 @@ export interface OzAdminUtilsWorldAreasResponse {
   schemaVersion: 1;
   worldName: string;
   generatedAt: string;
+  settings?: Record<string, string>;
   areas: OzAdminUtilsWorldAreaDto[];
 }

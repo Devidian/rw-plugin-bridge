@@ -8,16 +8,34 @@ import { getAllPlayers } from './player-service.js';
 import { listPlugins } from './plugin-inventory-service.js';
 import { getServerConfig } from './server-config-service.js';
 
-export function getMapData(lastChange?: number): OzAdminUtilsMapResponse {
-  const chunks = new MapSourceReader().listChunks(lastChange);
+export interface MapDataOptions {
+  lastChange?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export function getMapData(options: MapDataOptions | number = {}): OzAdminUtilsMapResponse {
+  const normalized = typeof options === 'number' ? { lastChange: options } : options;
+  const readLimit = normalized.limit === undefined ? undefined : normalized.limit + 1;
+  const chunks = new MapSourceReader().listChunks({
+    lastChange: normalized.lastChange,
+    limit: readLimit,
+    offset: normalized.offset,
+  });
+  const responseChunks = normalized.limit === undefined ? chunks : chunks.slice(0, normalized.limit);
+  const partial = normalized.limit !== undefined && chunks.length > normalized.limit;
   return {
     schemaVersion: 1,
-    full: lastChange === undefined,
-    nextChange: chunks.reduce<number | null>(
+    full: normalized.lastChange === undefined,
+    nextChange: responseChunks.reduce<number | null>(
       (result, chunk) => Math.max(result ?? chunk.updatedAtMs, chunk.updatedAtMs),
       null,
     ),
-    chunks: chunks.map(mapSourceChunkToDto),
+    ...(normalized.limit === undefined ? {} : {
+      partial,
+      ...(partial ? { nextOffset: (normalized.offset ?? 0) + normalized.limit } : {}),
+    }),
+    chunks: responseChunks.map(mapSourceChunkToDto),
   };
 }
 

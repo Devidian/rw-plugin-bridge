@@ -24,30 +24,50 @@ interface SourceRow {
 export class MapSourceUnavailableError extends Error {}
 export class InvalidMapSourceRowError extends Error {}
 
+export interface ListMapChunksOptions {
+  lastChange?: number;
+  limit?: number;
+  offset?: number;
+}
+
 export class MapSourceReader {
   constructor(
     private readonly sourcePath: string = resolveAdminUtilsMapSourcePath(),
     private readonly busyTimeoutMs: number = AppConfig.sqliteBusyTimeoutMs,
   ) {}
 
-  listChunks(lastChange?: number): MapSourceChunk[] {
+  listChunks(options: ListMapChunksOptions | number = {}): MapSourceChunk[] {
+    const normalized = typeof options === 'number' ? { lastChange: options } : options;
     const database = new Database(this.sourcePath, {
       readonly: true,
       fileMustExist: true,
     });
     try {
       database.pragma(`busy_timeout = ${this.busyTimeoutMs}`);
-      const rows = database
-        .prepare(
-          `
+      const paginated = normalized.limit !== undefined;
+      const statement = paginated
+        ? database.prepare(
+            `
+          SELECT schema_version, chunk_x, chunk_z, heights, textures,
+                 updated_at_ms, content_hash, biome, region
+          FROM map_chunks_v1
+          WHERE updated_at_ms > ?
+          ORDER BY updated_at_ms, chunk_x, chunk_z
+          LIMIT ? OFFSET ?
+        `,
+          )
+        : database.prepare(
+            `
           SELECT schema_version, chunk_x, chunk_z, heights, textures,
                  updated_at_ms, content_hash, biome, region
           FROM map_chunks_v1
           WHERE updated_at_ms > ?
           ORDER BY updated_at_ms, chunk_x, chunk_z
         `,
-        )
-        .all(lastChange ?? -1) as SourceRow[];
+          );
+      const rows = paginated
+        ? statement.all(normalized.lastChange ?? -1, normalized.limit, normalized.offset ?? 0) as SourceRow[]
+        : statement.all(normalized.lastChange ?? -1) as SourceRow[];
       return rows.map(decodeMapSourceRow);
     } finally {
       database.close();

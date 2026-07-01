@@ -28,6 +28,11 @@ function createServerRoot(): { root: string; databasePath: string } {
   writeFileSync(path.join(adminUtilsRoot, 'plugin.yml'), 'name: OZ - Admin Utils\nversion: 1.0.0\n');
   writeFileSync(path.join(gpsRoot, 'plugin.yml'), 'name: OZ - GPS\nversion: 1.0.0\n');
   writeFileSync(path.join(landClaimRoot, 'plugin.yml'), 'name: OZ - Land Claim\nversion: 1.0.0\n');
+  writeFileSync(path.join(landClaimRoot, 'settings.properties'), [
+    'ownerAreaPermission=ozlc-owner',
+    'defaultAreaPermission=ozlc-guest',
+    'otherAreaBorderColor=0x11223344',
+  ].join('\n'));
   writeFileSync(path.join(marketplaceRoot, 'plugin.yml'), 'name: OZ - Marketplace\nversion: 1.0.0\n');
   writeFileSync(path.join(otherRoot, 'plugin.yml'), 'name: OZ - Shop\nversion: 1.0.0\n');
 
@@ -114,6 +119,11 @@ function createServerRoot(): { root: string; databasePath: string } {
       priority INTEGER,
       creationdate INTEGER
     );
+    CREATE TABLE rights (
+      areaid INTEGER,
+      playerid INTEGER,
+      permission TEXT
+    );
   `);
   areasDb
     .prepare(`
@@ -123,6 +133,9 @@ function createServerRoot(): { root: string; databasePath: string } {
       VALUES (42, 'Rectangular', 'Spawn Claim', -64, 0, 32, -32.01, 64, 95.99, 'ozlc-guest', 0, 1000)
     `)
     .run();
+  areasDb
+    .prepare('INSERT INTO rights(areaid, playerid, permission) VALUES (42, 1, ?)')
+    .run('ozlc-owner');
   areasDb.close();
   const gpsDb = new Database(path.join(gpsRoot, 'world.db'));
   gpsDb.exec(`
@@ -345,12 +358,20 @@ describe('plugin routes', () => {
       schemaVersion: 1,
       worldName: 'world',
       generatedAt: expect.any(String),
+      settings: {
+        ownerAreaPermission: 'ozlc-owner',
+        defaultAreaPermission: 'ozlc-guest',
+        otherAreaBorderColor: '0x11223344',
+      },
       areas: [
         {
           id: 42,
           name: 'Spawn Claim',
           permission: 'ozlc-guest',
           priority: 0,
+          ownerUid: 'steam-1',
+          ownerDbId: 1,
+          ownerName: 'Tester',
           startX: -64,
           startY: 0,
           startZ: 32,

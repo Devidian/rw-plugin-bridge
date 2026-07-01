@@ -14,5 +14,7 @@ export interface OzAdminUtilsMapResponse {
   schemaVersion: 1;
   full: boolean;
   nextChange: number | null;
+  partial?: boolean;
+  nextOffset?: number;
   chunks: OzAdminUtilsMapChunkDto[];
 }
