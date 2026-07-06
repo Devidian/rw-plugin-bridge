@@ -7,7 +7,7 @@ import type {
 } from '../dto/ozadminutils-world-areas-response.js';
 import { AppConfig } from '../utils/app-config.js';
 import { getWorldName } from './server-config-service.js';
-import { defaultLogger } from './utils/logger.js';
+import { defaultLogger } from '../utils/logger.js';
 
 export class WorldAreaSourceUnavailableError extends Error {}
 
