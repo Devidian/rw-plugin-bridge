@@ -15,6 +15,6 @@ export function ozAdminUtilsWorldAreasHandler(req: Request, res: Response): void
       res.status(400).json({ error: 'invalid_last_change', message: error.message });
       return;
     }
-    res.status(503).json({ error: 'world_areas_unavailable' });
+    res.status(503).json({ error: 'world_areas_unavailable', message: (error as Error).toString() });
   }
 }
