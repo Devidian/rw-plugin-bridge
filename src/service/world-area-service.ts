@@ -7,6 +7,7 @@ import type {
 } from '../dto/ozadminutils-world-areas-response.js';
 import { AppConfig } from '../utils/app-config.js';
 import { getWorldName } from './server-config-service.js';
+import { defaultLogger } from './utils/logger.js';
 
 export class WorldAreaSourceUnavailableError extends Error {}
 
@@ -45,6 +46,7 @@ interface PlayerRow {
 export function getWorldAreas(lastChange?: number): OzAdminUtilsWorldAreasResponse {
   const worldName = getWorldName(AppConfig.serverRoot);
   const databasePath = path.join(AppConfig.serverRoot, 'Worlds', worldName, 'Areas.db');
+  defaultLogger.debug(`getWorldAreas from ${databasePath}`);
   if (!existsSync(databasePath)) {
     throw new WorldAreaSourceUnavailableError(`Areas database not found at ${databasePath}`);
   }
