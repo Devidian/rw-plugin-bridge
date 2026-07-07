@@ -3,6 +3,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import type { MapSourceChunk } from '../interfaces/map-source-chunk.js';
 import { AppConfig } from '../utils/app-config.js';
+import { logSqliteError, openReadonlySqliteDatabase } from '../utils/sqlite.js';
 
 const SOURCE_SCHEMA_VERSION = 1;
 const HEIGHT_BYTES = 4096;
@@ -38,12 +39,8 @@ export class MapSourceReader {
 
   listChunks(options: ListMapChunksOptions | number = {}): MapSourceChunk[] {
     const normalized = typeof options === 'number' ? { lastChange: options } : options;
-    const database = new Database(this.sourcePath, {
-      readonly: true,
-      fileMustExist: true,
-    });
+    const database = openReadonlySqliteDatabase(this.sourcePath, MapSourceUnavailableError, 'AdminUtils map source', this.busyTimeoutMs);
     try {
-      database.pragma(`busy_timeout = ${this.busyTimeoutMs}`);
       const paginated = normalized.limit !== undefined;
       const statement = paginated
         ? database.prepare(
@@ -69,6 +66,9 @@ export class MapSourceReader {
         ? statement.all(normalized.lastChange ?? -1, normalized.limit, normalized.offset ?? 0) as SourceRow[]
         : statement.all(normalized.lastChange ?? -1) as SourceRow[];
       return rows.map(decodeMapSourceRow);
+    } catch (error) {
+      logSqliteError('AdminUtils map source', error);
+      throw error;
     } finally {
       database.close();
     }

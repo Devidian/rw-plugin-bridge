@@ -6,6 +6,7 @@ import { ozAdminUtilsServerConfigHandler } from '../handler/ozadminutils-server-
 import { ozAdminUtilsWorldAreasHandler } from '../handler/ozadminutils-world-areas-handler.js';
 import { ozGpsMarkerHandler } from '../handler/ozgps-marker-handler.js';
 import { ozLandClaimClaimSalesHandler } from '../handler/ozlandclaim-claim-sales-handler.js';
+import { ozLandClaimRenewZonesHandler } from '../handler/ozlandclaim-renew-zones-handler.js';
 import { ozMarketplaceOffersHandler } from '../handler/ozmarketplace-offers-handler.js';
 import { ozMarketplaceZonesHandler } from '../handler/ozmarketplace-zones-handler.js';
 import { ozShopZonesHandler } from '../handler/ozshop-zones-handler.js';
@@ -22,3 +23,4 @@ pluginRouter.get('/ozmarketplace/zones', ozMarketplaceZonesHandler);
 pluginRouter.get('/ozmarketplace/offers', ozMarketplaceOffersHandler);
 pluginRouter.get('/ozshop/zones', ozShopZonesHandler);
 pluginRouter.get('/ozlandclaim/claim-sales', ozLandClaimClaimSalesHandler);
+pluginRouter.get('/ozlandclaim/renew-zones', ozLandClaimRenewZonesHandler);

@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
-import { getClaimSaleListings } from '../src/service/land-claim-service.js';
+import { getClaimSaleListings, getRenewZones } from '../src/service/land-claim-service.js';
 
 function createRootWithLandClaim(): string {
   const root = mkdtempSync(path.join(os.tmpdir(), 'rw-bridge-landclaim-'));
@@ -24,6 +24,14 @@ function createRootWithLandClaim(): string {
       purchased_at INTEGER NOT NULL DEFAULT 0,
       status TEXT NOT NULL
     );
+    CREATE TABLE renewZoneConfigs (
+      world TEXT NOT NULL,
+      area_id INTEGER NOT NULL,
+      interval_hours INTEGER NOT NULL,
+      last_reset_at INTEGER NOT NULL DEFAULT 0,
+      updated_at INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY(world, area_id)
+    );
   `);
   database
     .prepare(`
@@ -35,6 +43,16 @@ function createRootWithLandClaim(): string {
       (2, 'world', 43, 'owner-2', 8, 1500, 3000, '', 0, 0, 'SOLD'),
       (3, 'other', 44, 'owner-3', 9, 2000, 4000, '', 0, 0, 'ACTIVE'),
       (4, 'world', 45, 'owner-4', 10, 2500, 5000, '', 0, 0, 'ACTIVE')
+    `)
+    .run();
+  database
+    .prepare(`
+      INSERT INTO renewZoneConfigs
+      (world, area_id, interval_hours, last_reset_at, updated_at)
+      VALUES
+      ('world', 42, 12, 1000, 1000),
+      ('other', 43, 24, 2000, 2000),
+      ('world', 45, 1, 0, 3000)
     `)
     .run();
   database.close();
@@ -88,5 +106,41 @@ describe('land claim service', () => {
     process.env.SERVER_ROOT = createRootWithLandClaim();
 
     expect(getClaimSaleListings(1000).listings.map((listing) => listing.id)).toEqual([4]);
+  });
+
+  it('reads renew zones for the configured world', () => {
+    process.env.SERVER_ROOT = createRootWithLandClaim();
+
+    expect(getRenewZones()).toEqual({
+      schemaVersion: 1,
+      worldName: 'world',
+      generatedAt: expect.any(String),
+      zones: [
+        {
+          world: 'world',
+          areaId: 42,
+          intervalHours: 12,
+          lastResetAt: 1000,
+          nextRenewalAt: 43201000,
+          borderColor: '#00C2A89C',
+          frameColor: '#00C2A8AA',
+        },
+        {
+          world: 'world',
+          areaId: 45,
+          intervalHours: 1,
+          lastResetAt: 0,
+          nextRenewalAt: 0,
+          borderColor: '#00C2A89C',
+          frameColor: '#00C2A8AA',
+        },
+      ],
+    });
+  });
+
+  it('filters renew zones by lastChange', () => {
+    process.env.SERVER_ROOT = createRootWithLandClaim();
+
+    expect(getRenewZones(1000).zones.map((zone) => zone.areaId)).toEqual([45]);
   });
 });

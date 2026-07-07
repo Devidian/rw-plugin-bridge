@@ -1,9 +1,9 @@
 import Database from 'better-sqlite3';
-import { existsSync } from 'node:fs';
 import path from 'node:path';
 import type { OzGpsMarkerResponse } from '../dto/ozgps-marker-response.js';
 import type { MapGpsMarker } from '../interfaces/map-layer.js';
 import { AppConfig } from '../utils/app-config.js';
+import { logSqliteError, openReadonlySqliteDatabase } from '../utils/sqlite.js';
 import { getWorldName } from './server-config-service.js';
 
 interface GpsMarkerRow {
@@ -33,12 +33,8 @@ export function getGpsMarkers(type: string | undefined, lastChange?: number): Oz
 
 function readGlobalMarkers(lastChange?: number): MapGpsMarker[] {
   const databasePath = gpsDatabasePath();
-  if (!existsSync(databasePath)) {
-    throw new GpsMarkerSourceUnavailableError(`GPS database not found at ${databasePath}`);
-  }
-  const database = new Database(databasePath, { readonly: true, fileMustExist: true });
+  const database = openReadonlySqliteDatabase(databasePath, GpsMarkerSourceUnavailableError, 'GPS marker');
   try {
-    database.pragma(`busy_timeout = ${AppConfig.sqliteBusyTimeoutMs}`);
     if (!tableHasColumns(database, 'marker', [
       'id', 'type', 'created_at', 'pos_x', 'pos_y', 'pos_z', 'name', 'icon', 'color',
     ])) {
@@ -51,6 +47,9 @@ function readGlobalMarkers(lastChange?: number): MapGpsMarker[] {
       ORDER BY created_at DESC, id DESC
     `).all(lastChange ?? -1) as GpsMarkerRow[];
     return rows.flatMap(mapGpsMarkerRow);
+  } catch (error) {
+    logSqliteError('GPS marker', error);
+    throw error;
   } finally {
     database.close();
   }

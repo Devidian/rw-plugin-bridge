@@ -1,10 +1,10 @@
 import Database from 'better-sqlite3';
-import { existsSync } from 'node:fs';
 import path from 'node:path';
 import type { OzMarketplaceOffersResponse } from '../dto/ozmarketplace-offers-response.js';
 import type { OzMarketplaceZonesResponse } from '../dto/ozmarketplace-zones-response.js';
 import type { MapMarketplaceOffer, MapMarketplaceZone } from '../interfaces/map-layer.js';
 import { AppConfig } from '../utils/app-config.js';
+import { logSqliteError, openReadonlySqliteDatabase } from '../utils/sqlite.js';
 import { getWorldName } from './server-config-service.js';
 
 interface MarketplaceZoneRow {
@@ -44,6 +44,9 @@ export function getMarketplaceZones(lastChange?: number): OzMarketplaceZonesResp
       generatedAt: new Date().toISOString(),
       zones: rows.flatMap(mapZoneRow),
     };
+  } catch (error) {
+    logSqliteError('Marketplace', error);
+    throw error;
   } finally {
     database.close();
   }
@@ -91,6 +94,9 @@ export function getMarketplaceOffers(areaId: number, lastChange?: number): OzMar
       generatedAt: new Date().toISOString(),
       offers: rows.flatMap(mapOfferRow),
     };
+  } catch (error) {
+    logSqliteError('Marketplace', error);
+    throw error;
   } finally {
     database.close();
   }
@@ -98,12 +104,7 @@ export function getMarketplaceOffers(areaId: number, lastChange?: number): OzMar
 
 function openMarketplaceDatabase(): Database.Database {
   const databasePath = marketplaceDatabasePath();
-  if (!existsSync(databasePath)) {
-    throw new MarketplaceSourceUnavailableError(`Marketplace database not found at ${databasePath}`);
-  }
-  const database = new Database(databasePath, { readonly: true, fileMustExist: true });
-  database.pragma(`busy_timeout = ${AppConfig.sqliteBusyTimeoutMs}`);
-  return database;
+  return openReadonlySqliteDatabase(databasePath, MarketplaceSourceUnavailableError, 'Marketplace');
 }
 
 function marketplaceDatabasePath(rootPath: string = AppConfig.serverRoot): string {

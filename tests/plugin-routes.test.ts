@@ -32,6 +32,8 @@ function createServerRoot(): { root: string; databasePath: string } {
     'ownerAreaPermission=ozlc-owner',
     'defaultAreaPermission=ozlc-guest',
     'otherAreaBorderColor=0x11223344',
+    'renewAreaBorderColor=0x00C2A89c',
+    'renewAreaFrameColor=0x00C2A8AA',
   ].join('\n'));
   writeFileSync(path.join(marketplaceRoot, 'plugin.yml'), 'name: OZ - Marketplace\nversion: 1.0.0\n');
   writeFileSync(path.join(otherRoot, 'plugin.yml'), 'name: OZ - Shop\nversion: 1.0.0\n');
@@ -177,6 +179,14 @@ function createServerRoot(): { root: string; databasePath: string } {
       purchased_at INTEGER NOT NULL DEFAULT 0,
       status TEXT NOT NULL
     );
+    CREATE TABLE renewZoneConfigs (
+      world TEXT NOT NULL,
+      area_id INTEGER NOT NULL,
+      interval_hours INTEGER NOT NULL,
+      last_reset_at INTEGER NOT NULL DEFAULT 0,
+      updated_at INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY(world, area_id)
+    );
   `);
   landClaimDb
     .prepare(`
@@ -184,6 +194,13 @@ function createServerRoot(): { root: string; databasePath: string } {
       (id, world, area_id, owner_uuid, owner_dbid, price, listed_at,
        buyer_uuid, buyer_dbid, purchased_at, status)
       VALUES (1, 'world', 42, 'owner-1', 7, 1000, 1000, '', 0, 0, 'ACTIVE')
+    `)
+    .run();
+  landClaimDb
+    .prepare(`
+      INSERT INTO renewZoneConfigs
+      (world, area_id, interval_hours, last_reset_at, updated_at)
+      VALUES ('world', 42, 12, 1000, 1000)
     `)
     .run();
   landClaimDb.close();
@@ -362,6 +379,8 @@ describe('plugin routes', () => {
         ownerAreaPermission: 'ozlc-owner',
         defaultAreaPermission: 'ozlc-guest',
         otherAreaBorderColor: '0x11223344',
+        renewAreaBorderColor: '0x00C2A89c',
+        renewAreaFrameColor: '0x00C2A8AA',
       },
       areas: [
         {
@@ -501,6 +520,30 @@ describe('plugin routes', () => {
     });
   });
 
+  it('serves land claim renew zones', async () => {
+    const { root } = createServerRoot();
+    process.env.SERVER_ROOT = root;
+
+    const response = await request(createApp()).get('/plugins/ozlandclaim/renew-zones').expect(200);
+
+    expect(response.body).toEqual({
+      schemaVersion: 1,
+      worldName: 'world',
+      generatedAt: expect.any(String),
+      zones: [
+        {
+          world: 'world',
+          areaId: 42,
+          intervalHours: 12,
+          lastResetAt: 1000,
+          nextRenewalAt: 43201000,
+          borderColor: '#00C2A89C',
+          frameColor: '#00C2A8AA',
+        },
+      ],
+    });
+  });
+
   it('rejects invalid marketplace area id', async () => {
     await request(createApp())
       .get('/plugins/ozmarketplace/offers?areaId=invalid')
@@ -560,6 +603,7 @@ describe('plugin routes', () => {
     process.env.EXPOSE_OZLANDCLAIM = 'false';
 
     await request(createApp()).get('/plugins/ozlandclaim/claim-sales').expect(404).expect({ error: 'not_found' });
+    await request(createApp()).get('/plugins/ozlandclaim/renew-zones').expect(404).expect({ error: 'not_found' });
   });
 });
 

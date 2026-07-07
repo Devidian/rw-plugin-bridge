@@ -14,6 +14,7 @@ The bridge exposes data for one configured game server root under future-compati
 - `GET /plugins/ozmarketplace/offers?areaId=<area-id>&lastChange=<date-or-ms>`
 - `GET /plugins/ozshop/zones?lastChange=<date-or-ms>`
 - `GET /plugins/ozlandclaim/claim-sales?lastChange=<date-or-ms>`
+- `GET /plugins/ozlandclaim/renew-zones?lastChange=<date-or-ms>`
 
 ## Configuration
 

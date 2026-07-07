@@ -7,7 +7,7 @@ import type {
 } from '../dto/ozadminutils-world-areas-response.js';
 import { AppConfig } from '../utils/app-config.js';
 import { getWorldName } from './server-config-service.js';
-import { defaultLogger } from '../utils/logger.js';
+import { logSqliteError, openReadonlySqliteDatabase } from '../utils/sqlite.js';
 
 export class WorldAreaSourceUnavailableError extends Error {}
 
@@ -46,13 +46,8 @@ interface PlayerRow {
 export function getWorldAreas(lastChange?: number): OzAdminUtilsWorldAreasResponse {
   const worldName = getWorldName(AppConfig.serverRoot);
   const databasePath = path.join(AppConfig.serverRoot, 'Worlds', worldName, 'Areas.db');
-  defaultLogger.debug(`getWorldAreas from ${databasePath}`);
-  if (!existsSync(databasePath)) {
-    throw new WorldAreaSourceUnavailableError(`Areas database not found at ${databasePath}`);
-  }
-  const database = new Database(databasePath, { readonly: true, fileMustExist: true });
+  const database = openReadonlySqliteDatabase(databasePath, WorldAreaSourceUnavailableError, 'World areas');
   try {
-    database.pragma(`busy_timeout = ${AppConfig.sqliteBusyTimeoutMs}`);
     if (!tableHasColumns(database, 'areas', [
       'id',
       'name',
@@ -84,6 +79,9 @@ export function getWorldAreas(lastChange?: number): OzAdminUtilsWorldAreasRespon
       settings,
       areas: rows.flatMap((row) => mapAreaRow(row, owners.get(typeof row.id === 'number' ? row.id : -1))),
     };
+  } catch (error) {
+    logSqliteError('World areas', error);
+    throw error;
   } finally {
     database.close();
   }
@@ -165,8 +163,8 @@ function ownerByArea(
   const areasPath = path.join(rootPath, 'Worlds', worldName, 'Areas.db');
   const playersPath = path.join(rootPath, 'Worlds', worldName, 'Player.db');
   if (!existsSync(playersPath)) return new Map();
-  const database = new Database(areasPath, { readonly: true, fileMustExist: true });
-  const players = new Database(playersPath, { readonly: true, fileMustExist: true });
+  const database = openReadonlySqliteDatabase(areasPath, WorldAreaSourceUnavailableError, 'World area owners');
+  const players = openReadonlySqliteDatabase(playersPath, WorldAreaSourceUnavailableError, 'World area players');
   try {
     if (
       !tableHasColumns(database, 'rights', ['areaid', 'playerid', 'permission']) ||
@@ -198,6 +196,9 @@ function ownerByArea(
         name: player.name,
       }]];
     }));
+  } catch (error) {
+    logSqliteError('World area owners', error);
+    throw error;
   } finally {
     database.close();
     players.close();

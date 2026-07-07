@@ -1,8 +1,7 @@
-import Database from 'better-sqlite3';
-import { existsSync } from 'node:fs';
 import path from 'node:path';
 import type { DbPlayer } from '../interfaces/game-player.js';
 import { AppConfig } from '../utils/app-config.js';
+import { logSqliteError, openReadonlySqliteDatabase } from '../utils/sqlite.js';
 import { bufferToPosition } from './spawn-packet-decoder.js';
 import { getWorldName } from './server-config-service.js';
 
@@ -20,13 +19,12 @@ export function getAllPlayers(
   busyTimeoutMs: number = AppConfig.sqliteBusyTimeoutMs,
 ): DbPlayer[] {
   const databasePath = path.resolve(rootPath, 'Worlds', getWorldName(rootPath), 'Player.db');
-  if (!existsSync(databasePath)) {
-    throw new PlayerDatabaseUnavailableError(`Player database not found at ${databasePath}`);
-  }
-  const database = new Database(databasePath, { readonly: true, fileMustExist: true });
+  const database = openReadonlySqliteDatabase(databasePath, PlayerDatabaseUnavailableError, 'Player', busyTimeoutMs);
   try {
-    database.pragma(`busy_timeout = ${busyTimeoutMs}`);
     return (database.prepare('SELECT * FROM player').all() as PlayerRow[]).map(mapPlayerRow);
+  } catch (error) {
+    logSqliteError('Player', error);
+    throw error;
   } finally {
     database.close();
   }

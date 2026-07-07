@@ -1,9 +1,9 @@
 import Database from 'better-sqlite3';
-import { existsSync } from 'node:fs';
 import path from 'node:path';
 import type { OzShopZonesResponse } from '../dto/ozshop-zones-response.js';
 import type { MapShopZone } from '../interfaces/map-layer.js';
 import { AppConfig } from '../utils/app-config.js';
+import { logSqliteError, openReadonlySqliteDatabase } from '../utils/sqlite.js';
 import { getWorldName } from './server-config-service.js';
 
 interface ShopZoneRow {
@@ -43,6 +43,9 @@ export function getShopZones(lastChange?: number): OzShopZonesResponse {
       generatedAt: new Date().toISOString(),
       zones: rows.flatMap(mapZoneRow),
     };
+  } catch (error) {
+    logSqliteError('Shop', error);
+    throw error;
   } finally {
     database.close();
   }
@@ -50,12 +53,7 @@ export function getShopZones(lastChange?: number): OzShopZonesResponse {
 
 function openShopDatabase(): Database.Database {
   const databasePath = shopDatabasePath();
-  if (!existsSync(databasePath)) {
-    throw new ShopSourceUnavailableError(`Shop database not found at ${databasePath}`);
-  }
-  const database = new Database(databasePath, { readonly: true, fileMustExist: true });
-  database.pragma(`busy_timeout = ${AppConfig.sqliteBusyTimeoutMs}`);
-  return database;
+  return openReadonlySqliteDatabase(databasePath, ShopSourceUnavailableError, 'Shop');
 }
 
 function shopDatabasePath(rootPath: string = AppConfig.serverRoot): string {
