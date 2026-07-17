@@ -31,9 +31,9 @@ function createRootWithGps(): string {
       INSERT INTO marker
       (id, player_id, type, group_name, created_at, pos_x, pos_y, pos_z, name, icon, color, cost)
       VALUES
-      (1, 0, 'GLOBAL', NULL, 1000, 10, 20, 30, 'Spawn', 'icon-ki-gps-global', ?, 0),
-      (2, 0, 'PRIVATE', NULL, 2000, 1, 2, 3, 'Private', 'icon-ki-gps-private', ?, 0),
-      (3, 0, 'GLOBAL', NULL, 3000, 40, 50, 60, 'Market', 'icon-ki-village-01', ?, 0)
+      (1, 0, 'GLOBAL', NULL, 1000, 10, 20, 30, 'Spawn', 'menu-global-marker', ?, 0),
+      (2, 0, 'PRIVATE', NULL, 2000, 1, 2, 3, 'Private', 'menu-marker-private', ?, 0),
+      (3, 0, 'GLOBAL', NULL, 3000, 40, 50, 60, 'Market', 'marker-village-small', ?, 0)
     `)
     .run(0xff00ff80, 0xff0000ff, 0x01020304);
   database.close();
@@ -65,7 +65,7 @@ describe('gps marker service', () => {
           x: 40,
           y: 50,
           z: 60,
-          icon: 'icon-ki-village-01',
+          icon: 'marker-village-small',
           color: '#01020304',
           createdAt: '1970-01-01T00:00:03.000Z',
         },
@@ -75,7 +75,7 @@ describe('gps marker service', () => {
           x: 10,
           y: 20,
           z: 30,
-          icon: 'icon-ki-gps-global',
+          icon: 'menu-global-marker',
           color: '#FF00FF80',
           createdAt: '1970-01-01T00:00:01.000Z',
         },
