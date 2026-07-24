@@ -8,6 +8,7 @@ import type {
 import { AppConfig } from '../utils/app-config.js';
 import { getWorldName } from './server-config-service.js';
 import { logSqliteError, openReadonlySqliteDatabase } from '../utils/sqlite.js';
+import { withSqliteSnapshots } from '../utils/sqlite-snapshot.js';
 
 export class WorldAreaSourceUnavailableError extends Error {}
 
@@ -45,46 +46,50 @@ interface PlayerRow {
 
 export function getWorldAreas(lastChange?: number): OzAdminUtilsWorldAreasResponse {
   const worldName = getWorldName(AppConfig.serverRoot);
-  const databasePath = path.join(AppConfig.serverRoot, 'Worlds', worldName, 'Areas.db');
-  const database = openReadonlySqliteDatabase(databasePath, WorldAreaSourceUnavailableError, 'World areas');
-  try {
-    if (!tableHasColumns(database, 'areas', [
-      'id',
-      'name',
-      'permission',
-      'priority',
-      'startposx',
-      'startposy',
-      'startposz',
-      'endposx',
-      'endposy',
-      'endposz',
-      'creationdate',
-    ])) {
-      throw new WorldAreaSourceUnavailableError('areas missing required columns');
+  const worldRoot = path.join(AppConfig.serverRoot, 'Worlds', worldName);
+  const areasPath = path.join(worldRoot, 'Areas.db');
+  const playersPath = path.join(worldRoot, 'Player.db');
+  return withSqliteSnapshots([areasPath, playersPath], (snapshotPath) => {
+    const database = openReadonlySqliteDatabase(snapshotPath(areasPath), WorldAreaSourceUnavailableError, 'World areas');
+    try {
+      if (!tableHasColumns(database, 'areas', [
+        'id',
+        'name',
+        'permission',
+        'priority',
+        'startposx',
+        'startposy',
+        'startposz',
+        'endposx',
+        'endposy',
+        'endposz',
+        'creationdate',
+      ])) {
+        throw new WorldAreaSourceUnavailableError('areas missing required columns');
+      }
+      const rows = database.prepare(`
+        SELECT id, name, permission, priority,
+               startposx, startposy, startposz, endposx, endposy, endposz, creationdate
+        FROM areas
+        WHERE creationdate > ?
+        ORDER BY creationdate DESC, id DESC
+      `).all(lastChange ?? -1) as AreaRow[];
+      const settings = readLandClaimSettings(AppConfig.serverRoot);
+      const owners = ownerByArea(snapshotPath(areasPath), snapshotPath(playersPath), settings);
+      return {
+        schemaVersion: 1,
+        worldName,
+        generatedAt: new Date().toISOString(),
+        settings,
+        areas: rows.flatMap((row) => mapAreaRow(row, owners.get(typeof row.id === 'number' ? row.id : -1))),
+      };
+    } catch (error) {
+      logSqliteError('World areas', error);
+      throw error;
+    } finally {
+      database.close();
     }
-    const rows = database.prepare(`
-      SELECT id, name, permission, priority,
-             startposx, startposy, startposz, endposx, endposy, endposz, creationdate
-      FROM areas
-      WHERE creationdate > ?
-      ORDER BY creationdate DESC, id DESC
-    `).all(lastChange ?? -1) as AreaRow[];
-    const settings = readLandClaimSettings(AppConfig.serverRoot);
-    const owners = ownerByArea(AppConfig.serverRoot, worldName, settings);
-    return {
-      schemaVersion: 1,
-      worldName,
-      generatedAt: new Date().toISOString(),
-      settings,
-      areas: rows.flatMap((row) => mapAreaRow(row, owners.get(typeof row.id === 'number' ? row.id : -1))),
-    };
-  } catch (error) {
-    logSqliteError('World areas', error);
-    throw error;
-  } finally {
-    database.close();
-  }
+  });
 }
 
 function mapAreaRow(row: AreaRow, owner?: OwnerRow): OzAdminUtilsWorldAreaDto[] {
@@ -156,12 +161,10 @@ function readLandClaimSettings(rootPath: string): Record<string, string> {
 }
 
 function ownerByArea(
-  rootPath: string,
-  worldName: string,
+  areasPath: string,
+  playersPath: string,
   settings: Record<string, string>,
 ): Map<number, OwnerRow> {
-  const areasPath = path.join(rootPath, 'Worlds', worldName, 'Areas.db');
-  const playersPath = path.join(rootPath, 'Worlds', worldName, 'Player.db');
   if (!existsSync(playersPath)) return new Map();
   const database = openReadonlySqliteDatabase(areasPath, WorldAreaSourceUnavailableError, 'World area owners');
   const players = openReadonlySqliteDatabase(playersPath, WorldAreaSourceUnavailableError, 'World area players');

@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
@@ -71,5 +71,19 @@ describe('player service', () => {
         primaryspawn: { x: 1, y: 2, z: 3 },
       }),
     ]);
+  });
+
+  it('reads a WAL-configured database from a read-only game directory', () => {
+    const root = createRootWithPlayers();
+    const worldRoot = path.join(root, 'Worlds', 'BridgeWorld');
+    const database = new Database(path.join(worldRoot, 'Player.db'));
+    database.pragma('journal_mode = WAL');
+    database.close();
+    chmodSync(worldRoot, 0o555);
+    try {
+      expect(getAllPlayers(root)).toHaveLength(1);
+    } finally {
+      chmodSync(worldRoot, 0o755);
+    }
   });
 });

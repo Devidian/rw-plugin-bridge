@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { DbPlayer } from '../interfaces/game-player.js';
 import { AppConfig } from '../utils/app-config.js';
 import { logSqliteError, openReadonlySqliteDatabase } from '../utils/sqlite.js';
+import { withSqliteSnapshots } from '../utils/sqlite-snapshot.js';
 import { bufferToPosition } from './spawn-packet-decoder.js';
 import { getWorldName } from './server-config-service.js';
 
@@ -19,15 +20,17 @@ export function getAllPlayers(
   busyTimeoutMs: number = AppConfig.sqliteBusyTimeoutMs,
 ): DbPlayer[] {
   const databasePath = path.resolve(rootPath, 'Worlds', getWorldName(rootPath), 'Player.db');
-  const database = openReadonlySqliteDatabase(databasePath, PlayerDatabaseUnavailableError, 'Player', busyTimeoutMs);
-  try {
-    return (database.prepare('SELECT * FROM player').all() as PlayerRow[]).map(mapPlayerRow);
-  } catch (error) {
-    logSqliteError('Player', error);
-    throw error;
-  } finally {
-    database.close();
-  }
+  return withSqliteSnapshots([databasePath], (snapshotPath) => {
+    const database = openReadonlySqliteDatabase(snapshotPath(databasePath), PlayerDatabaseUnavailableError, 'Player', busyTimeoutMs);
+    try {
+      return (database.prepare('SELECT * FROM player').all() as PlayerRow[]).map(mapPlayerRow);
+    } catch (error) {
+      logSqliteError('Player', error);
+      throw error;
+    } finally {
+      database.close();
+    }
+  });
 }
 
 function mapPlayerRow(row: PlayerRow): DbPlayer {
