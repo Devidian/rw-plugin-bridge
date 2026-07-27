@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { MapSourceChunk } from '../interfaces/map-source-chunk.js';
 import { AppConfig } from '../utils/app-config.js';
 import { logSqliteError, openReadonlySqliteDatabase } from '../utils/sqlite.js';
+import { getWorldName } from './server-config-service.js';
 
 const SOURCE_SCHEMA_VERSION = 1;
 const HEIGHT_BYTES = 4096;
@@ -75,15 +76,26 @@ export class MapSourceReader {
   }
 }
 
-export function resolveAdminUtilsMapSourcePath(): string {
+export function resolveAdminUtilsMapSourcePath(
+  serverRoot: string = AppConfig.serverRoot,
+): string {
   if (AppConfig.adminUtilsMapDbPath) return AppConfig.adminUtilsMapDbPath;
-  const pluginRoot = path.join(AppConfig.serverRoot, 'Plugins', 'OZAdminUtils');
-  if (AppConfig.adminUtilsMapWorldName) {
-    return path.join(pluginRoot, `${AppConfig.adminUtilsMapWorldName}.db`);
-  }
+  const pluginRoot = path.join(serverRoot, 'Plugins', 'OZAdminUtils');
   if (!existsSync(pluginRoot)) {
     throw new MapSourceUnavailableError('OZAdminUtils plugin directory not found');
   }
+
+  const worldName = AppConfig.adminUtilsMapWorldName ?? worldNameFromServerConfig(serverRoot);
+  if (worldName) {
+    const sourcePath = path.join(pluginRoot, `${worldName}.db`);
+    if (!existsSync(sourcePath)) {
+      throw new MapSourceUnavailableError(
+        `AdminUtils map source database not found for world "${worldName}"`,
+      );
+    }
+    return sourcePath;
+  }
+
   const candidates = readdirSync(pluginRoot)
     .filter((entry) => entry.endsWith('.db'))
     .filter((entry) => !entry.endsWith('.db-wal') && !entry.endsWith('.db-shm'))
@@ -92,6 +104,14 @@ export function resolveAdminUtilsMapSourcePath(): string {
     throw new MapSourceUnavailableError('ADMINUTILS_MAP_WORLD_NAME or ADMINUTILS_MAP_DB_PATH is required');
   }
   return path.join(pluginRoot, candidates[0]);
+}
+
+function worldNameFromServerConfig(serverRoot: string): string | undefined {
+  try {
+    return getWorldName(serverRoot);
+  } catch {
+    return undefined;
+  }
 }
 
 export function decodeMapSourceRow(row: SourceRow): MapSourceChunk {

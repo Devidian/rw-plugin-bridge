@@ -16,6 +16,7 @@
 
 ## [Unreleased]
 
+- change: resolve the Admin Utils map database from `World_Name` in `server.properties`
 - change: update persisted GPS icon keys to the renamed semantic identifiers
 - fix: read world map and player data from local SQLite snapshots when the game mount is read-only
 
