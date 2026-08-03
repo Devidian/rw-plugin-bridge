@@ -6,6 +6,7 @@ jest.unstable_mockModule('../src/service/map-source-service.js', () => ({
   MapSourceReader: jest.fn().mockImplementation(() => ({
     listChunks: listChunksMock,
   })),
+  resolveAdminUtilsMapSourcePath: jest.fn(),
 }));
 
 const { getMapData } = await import('../src/service/ozadminutils-service.js');

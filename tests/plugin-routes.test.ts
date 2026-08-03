@@ -348,6 +348,68 @@ describe('plugin routes', () => {
     });
   });
 
+  it('overlays fresh Admin Utils live positions on persisted players', async () => {
+    const { root, databasePath } = createServerRoot();
+    process.env.SERVER_ROOT = root;
+    const database = new Database(databasePath);
+    database.exec(`
+      CREATE TABLE live_player_positions_v1 (
+        uid TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        pos_x REAL NOT NULL,
+        pos_y REAL NOT NULL,
+        pos_z REAL NOT NULL,
+        updated_at_ms INTEGER NOT NULL
+      );
+    `);
+    database.prepare(`
+      INSERT INTO live_player_positions_v1 (uid, name, pos_x, pos_y, pos_z, updated_at_ms)
+      VALUES ('steam-1', 'Tester Live', 101, 202, 303, ?)
+    `).run(Date.now());
+    database.close();
+
+    const response = await request(createApp()).get('/plugins/ozadminutils/playerlist').expect(200);
+
+    expect(response.body.players[0]).toEqual(expect.objectContaining({
+      uid: 'steam-1',
+      name: 'Tester Live',
+      posx: 101,
+      posy: 202,
+      posz: 303,
+    }));
+  });
+
+  it('ignores stale Admin Utils live positions', async () => {
+    const { root, databasePath } = createServerRoot();
+    process.env.SERVER_ROOT = root;
+    const database = new Database(databasePath);
+    database.exec(`
+      CREATE TABLE live_player_positions_v1 (
+        uid TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        pos_x REAL NOT NULL,
+        pos_y REAL NOT NULL,
+        pos_z REAL NOT NULL,
+        updated_at_ms INTEGER NOT NULL
+      );
+    `);
+    database.prepare(`
+      INSERT INTO live_player_positions_v1 (uid, name, pos_x, pos_y, pos_z, updated_at_ms)
+      VALUES ('steam-1', 'Stale', 101, 202, 303, ?)
+    `).run(Date.now() - 60000);
+    database.close();
+
+    const response = await request(createApp()).get('/plugins/ozadminutils/playerlist').expect(200);
+
+    expect(response.body.players[0]).toEqual(expect.objectContaining({
+      uid: 'steam-1',
+      name: 'Tester',
+      posx: 10,
+      posy: 20,
+      posz: 30,
+    }));
+  });
+
   it('serves masked server config', async () => {
     const { root } = createServerRoot();
     process.env.SERVER_ROOT = root;

@@ -35,6 +35,7 @@ The bridge exposes data for one configured game server root under future-compati
 | `EXPOSE_OZSHOP`                     | `true`                                   | Enables the OZ Shop routes.                                         |
 | `EXPOSE_OZLANDCLAIM`                | `true`                                   | Enables the OZ LandClaim routes.                                    |
 | `SQLITE_BUSY_TIMEOUT_MS`            | `5000`                                   | SQLite busy timeout for read-only connections.                      |
+| `LIVE_PLAYER_POSITION_MAX_AGE_MS`   | `5000`                                   | Maximum age of an Admin Utils runtime position before fallback.     |
 | `LOG_LEVEL`                         | `info`                                   | `debug`, `info`, `warn`, `error`, or `off`.                         |
 
 `lastChange` accepts epoch milliseconds or an ISO date string. Without `lastChange`, the map route returns all current rows.
@@ -43,6 +44,10 @@ The Admin Utils map database normally requires no separate path configuration.
 The bridge reads `World_Name` from `<SERVER_ROOT>/server.properties` and opens
 `<SERVER_ROOT>/Plugins/OZAdminUtils/<World_Name>.db`. The two legacy overrides
 remain available for exceptional layouts and backward compatibility.
+
+When Admin Utils provides `live_player_positions_v1`, the playerlist route
+overlays fresh coordinates on matching persisted players. Missing, stale, or
+unreadable live rows are ignored and `Player.db` remains the fallback.
 
 Map BLOB fields are base64 encoded as `heightsBase64` and `texturesBase64`.
 

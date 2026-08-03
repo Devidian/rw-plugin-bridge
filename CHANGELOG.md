@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+* overlay fresh Admin Utils runtime positions on persisted player map data
+
 ## [0.1.1](https://github.com/Devidian/rw-plugin-bridge/compare/rw-plugin-bridge-v0.1.0...rw-plugin-bridge-v0.1.1) (2026-07-24)
 
 

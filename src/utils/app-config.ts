@@ -59,6 +59,10 @@ export class AppConfig {
     return boundedInteger(process.env.SQLITE_BUSY_TIMEOUT_MS, 5000, 0, 30000);
   }
 
+  static get livePlayerPositionMaxAgeMs(): number {
+    return boundedInteger(process.env.LIVE_PLAYER_POSITION_MAX_AGE_MS, 5000, 1000, 60000);
+  }
+
   static get logLevel(): 'debug' | 'info' | 'warn' | 'error' | 'off' {
     const value = process.env.LOG_LEVEL;
     return value === 'debug' || value === 'info' || value === 'warn' || value === 'error' || value === 'off'
