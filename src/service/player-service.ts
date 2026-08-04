@@ -86,6 +86,7 @@ function overlayLivePositions(
             posy: live.pos_y,
             posz: live.pos_z,
             lastseen: Math.floor(live.updated_at_ms / 1000),
+            online: true,
           };
         });
       } finally {

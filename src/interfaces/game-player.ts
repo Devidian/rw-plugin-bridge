@@ -28,4 +28,6 @@ export interface DbPlayer {
   playtime: number;
   firstseen: number;
   lastseen: number;
+  /** True only while Admin Utils has a fresh, server-sampled position for this player. */
+  online?: boolean;
 }

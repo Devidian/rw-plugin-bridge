@@ -376,6 +376,7 @@ describe('plugin routes', () => {
       posx: 101,
       posy: 202,
       posz: 303,
+      online: true,
     }));
   });
 
