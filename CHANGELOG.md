@@ -6,6 +6,18 @@
 
 * overlay fresh Admin Utils runtime positions on persisted player map data
 
+## [0.2.1](https://github.com/Devidian/rw-plugin-bridge/compare/rw-plugin-bridge-v0.2.0...rw-plugin-bridge-v0.2.1) (2026-11-27)
+
+
+### Changed
+
+* reuse Plugin Bridge source readers ([b6f8c42](https://github.com/Devidian/rw-plugin-bridge/commit/b6f8c4252c02c76c38a388fb7499fdc87d3c3825))
+
+
+### Documentation
+
+* **codemap:** add repository navigation and maintenance workflow ([f95c8da](https://github.com/Devidian/rw-plugin-bridge/commit/f95c8daf984baad65afe40f55fe6bde42b4a79de))
+
 ## [0.2.0](https://github.com/Devidian/rw-plugin-bridge/compare/rw-plugin-bridge-v0.1.1...rw-plugin-bridge-v0.2.0) (2026-08-04)
 
 
