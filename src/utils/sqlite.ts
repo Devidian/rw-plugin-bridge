@@ -27,3 +27,12 @@ export function logSqliteError(label: string, error: unknown): void {
   defaultLogger.error(`${label} sqlite error: ${(error as Error).message}`);
 }
 
+
+/** Inspect fixed, internal table names without opening a writable database. */
+export function tableHasColumns(database: Database.Database, table: string, columns: string[]): boolean {
+  const actual = new Set(
+    (database.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>)
+      .map((column) => column.name),
+  );
+  return columns.every((column) => actual.has(column));
+}

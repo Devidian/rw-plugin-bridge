@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { existsSync, readFileSync } from 'node:fs';
+
 import path from 'node:path';
 import type { OzLandClaimClaimSalesResponse } from '../dto/ozlandclaim-claim-sales-response.js';
 import type {
@@ -8,8 +8,9 @@ import type {
 } from '../dto/ozlandclaim-renew-zones-response.js';
 import type { MapClaimSaleListing } from '../interfaces/map-layer.js';
 import { AppConfig } from '../utils/app-config.js';
-import { logSqliteError, openReadonlySqliteDatabase } from '../utils/sqlite.js';
+import { logSqliteError, openReadonlySqliteDatabase, tableHasColumns } from '../utils/sqlite.js';
 import { getWorldName } from './server-config-service.js';
+import { readLandClaimSettings } from './land-claim-settings.js';
 
 interface ClaimSaleListingRow {
   id: unknown;
@@ -167,44 +168,9 @@ function mapRenewZoneRow(
   }];
 }
 
-function readLandClaimSettings(rootPath: string): Record<string, string> {
-  const settingsPath = path.join(rootPath, 'Plugins', 'OZLandClaim', 'settings.properties');
-  if (!existsSync(settingsPath)) return {};
-  const settings: Record<string, string> = {};
-  for (const line of readFileSync(settingsPath, 'utf8').split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('!')) continue;
-    const separator = firstSeparator(trimmed);
-    if (separator < 0) continue;
-    const key = trimmed.slice(0, separator).trim();
-    if (!key) continue;
-    settings[key] = trimmed.slice(separator + 1).trim();
-  }
-  return settings;
-}
 
 function settingsColor(value: string | undefined, fallback: string): string {
   const normalized = value?.trim().replace(/^0x/i, '').replace(/^#/, '');
   if (!normalized || !/^[0-9a-f]{8}$/i.test(normalized)) return fallback;
   return `#${normalized.toUpperCase()}`;
-}
-
-function firstSeparator(line: string): number {
-  const equals = line.indexOf('=');
-  const colon = line.indexOf(':');
-  if (equals < 0) return colon;
-  if (colon < 0) return equals;
-  return Math.min(equals, colon);
-}
-
-function tableHasColumns(
-  database: Database.Database,
-  table: string,
-  columns: string[],
-): boolean {
-  const actual = new Set(
-    (database.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>)
-      .map((column) => column.name),
-  );
-  return columns.every((column) => actual.has(column));
 }

@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { OzShopZonesResponse } from '../dto/ozshop-zones-response.js';
 import type { MapShopZone } from '../interfaces/map-layer.js';
 import { AppConfig } from '../utils/app-config.js';
-import { logSqliteError, openReadonlySqliteDatabase } from '../utils/sqlite.js';
+import { logSqliteError, openReadonlySqliteDatabase, tableHasColumns } from '../utils/sqlite.js';
 import { getWorldName } from './server-config-service.js';
 
 interface ShopZoneRow {
@@ -80,16 +80,4 @@ function mapZoneRow(row: ShopZoneRow): MapShopZone[] {
     systemShop: row.system_shop as number,
     systemOffersFile: row.system_offers_file,
   }];
-}
-
-function tableHasColumns(
-  database: Database.Database,
-  table: string,
-  columns: string[],
-): boolean {
-  const actual = new Set(
-    (database.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>)
-      .map((column) => column.name),
-  );
-  return columns.every((column) => actual.has(column));
 }

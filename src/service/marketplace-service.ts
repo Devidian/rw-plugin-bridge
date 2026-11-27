@@ -4,7 +4,7 @@ import type { OzMarketplaceOffersResponse } from '../dto/ozmarketplace-offers-re
 import type { OzMarketplaceZonesResponse } from '../dto/ozmarketplace-zones-response.js';
 import type { MapMarketplaceOffer, MapMarketplaceZone } from '../interfaces/map-layer.js';
 import { AppConfig } from '../utils/app-config.js';
-import { logSqliteError, openReadonlySqliteDatabase } from '../utils/sqlite.js';
+import { logSqliteError, openReadonlySqliteDatabase, tableHasColumns } from '../utils/sqlite.js';
 import { getWorldName } from './server-config-service.js';
 
 interface MarketplaceZoneRow {
@@ -155,17 +155,6 @@ function mapOfferRow(row: MarketplaceOfferRow): MapMarketplaceOffer[] {
   }];
 }
 
-function tableHasColumns(
-  database: Database.Database,
-  table: string,
-  columns: string[],
-): boolean {
-  const actual = new Set(
-    (database.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>)
-      .map((column) => column.name),
-  );
-  return columns.every((column) => actual.has(column));
-}
 
 function epochMillis(value: unknown): string {
   return new Date(value as number).toISOString();

@@ -1,9 +1,8 @@
-import Database from 'better-sqlite3';
 import path from 'node:path';
 import type { OzGpsMarkerResponse } from '../dto/ozgps-marker-response.js';
 import type { MapGpsMarker } from '../interfaces/map-layer.js';
 import { AppConfig } from '../utils/app-config.js';
-import { logSqliteError, openReadonlySqliteDatabase } from '../utils/sqlite.js';
+import { logSqliteError, openReadonlySqliteDatabase, tableHasColumns } from '../utils/sqlite.js';
 import { getWorldName } from './server-config-service.js';
 
 interface GpsMarkerRow {
@@ -90,17 +89,6 @@ function mapGpsMarkerRow(row: GpsMarkerRow): MapGpsMarker[] {
   }];
 }
 
-function tableHasColumns(
-  database: Database.Database,
-  table: string,
-  columns: string[],
-): boolean {
-  const actual = new Set(
-    (database.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>)
-      .map((column) => column.name),
-  );
-  return columns.every((column) => actual.has(column));
-}
 
 function packedIntRgba(value: number): string {
   const unsigned = value >>> 0;
